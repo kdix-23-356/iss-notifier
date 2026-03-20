@@ -37,4 +37,3 @@ jobs:
       # ⑤ Jest テスト実行
       - name: Run tests
         run: npm test
-``
