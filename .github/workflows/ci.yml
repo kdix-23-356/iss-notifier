@@ -1,0 +1,40 @@
+# path: .github/workflows/ci.yml
+# 目的:
+# - main への push / PR 時に自動で型チェックとテストを実行
+# - ローカルと同じ品質ゲートを GitHub 上でも保証する
+
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      # ① リポジトリをチェックアウト
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ② Node.js セットアップ（Node 20）
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      # ③ 依存関係インストール（lockfile 厳守）
+      - name: Install dependencies
+        run: npm ci
+
+      # ④ TypeScript 型チェック
+      - name: Type check
+        run: npm run typecheck
+
+      # ⑤ Jest テスト実行
+      - name: Run tests
+        run: npm test
+``
