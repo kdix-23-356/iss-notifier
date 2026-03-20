@@ -1,0 +1,34 @@
+{
+  "compilerOptions": {
+    // File Layout
+    "rootDir": ".",
+    "outDir": "dist",
+
+    // Environment Settings
+    "module": "commonjs",
+    "target": "ES2020",
+    "types": ["node", "jest"],
+    "moduleResolution": "node",
+
+    // Outputs / Type Safety
+    "sourceMap": true,
+    "declaration": true,
+    "declarationMap": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "noUncheckedSideEffectImports": true,
+    "verbatimModuleSyntax": false,
+    "jsx": "react-jsx"
+  },
+  // アプリ本体（src配下）と jest.config.ts だけを含める
+  "include": ["src", "jest.config.ts"],
+  // 逆にビルド対象から除きたいものがあれば exclude を使う
+  "exclude": ["dist", "node_modules", "data"]
+}

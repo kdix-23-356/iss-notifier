@@ -1,0 +1,12 @@
+version: "3.8"
+services:
+  engine:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    env_file: .env
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/app/data             # SQLite ファイル永続化
+    restart: unless-stopped
