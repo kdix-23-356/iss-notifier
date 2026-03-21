@@ -231,3 +231,4 @@ jobs:
 - `SunCalc` for solar position
 - `Open‑Meteo` for weather data
 - Slack (Block Kit) for notifications
+<!-- CI bootstrap -->
