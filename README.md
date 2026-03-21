@@ -1,7 +1,22 @@
 # ISS Notifier / ISS 通過通知エンジン
 
+![CI](https://github.com/kdix-23-356/iss-notifier/actions/workflows/ci.yml/badge.svg)
+
 > **EN**: An engine that predicts visible ISS passes and sends notifications based on weather and illumination conditions.
 > **JP**: ISS（国際宇宙ステーション）の可視パスを予測し、天候・日照条件を加味して通知するエンジンです。
+
+---
+
+## 💡 Motivation / 動機
+
+- **EN**:
+  I wanted a practical system to decide whether an ISS pass is *actually worth observing*, not just geometrically visible.
+  By combining orbital mechanics, weather data, and illumination, this project aims to automate that decision end-to-end.
+
+- **JP**:
+  ISS の通過が理論上見えるだけでなく、
+  本当に観測する価値があるかを自動で判断したい、という動機から作りました。
+  軌道計算・天気・日照条件を統合し、通知まで含めて一気通貫で扱うことを目的としています。
 
 ---
 
@@ -9,6 +24,15 @@
 
 - **EN**: This service periodically predicts ISS passes over predefined ground stations, evaluates visibility using geometry + weather + illumination, and notifies via Slack with rich details.
 - **JP**: あらかじめ登録した地上局上空の **ISS 通過（パス）** を定期予測し、**幾何・天気・日照**の 3 要素から可視性をスコア化して、**Slack** に詳細通知します。
+
+---
+
+## 🔔 Notification Example / 通知例
+
+![Slack notification example](docs/images/slack-notification.png)
+
+- **EN**: Example of a Slack notification including pass timing, elevation, weather, and illumination score.
+- **JP**: パス時刻、最大仰角、天気、日照スコアを含む Slack 通知の例です。
 
 ---
 
@@ -99,7 +123,7 @@ SLACK_WEBHOOK_URL=
 NODE_ENV=development
 ```
 
-- **EN**: `.env` is **git‑ignored**. Never commit secrets.  
+- **EN**: `.env` is **git‑ignored**. Never commit secrets.
 - **JP**: `.env` は **.gitignore 済み**。機密は絶対にコミットしないでください。
 
 ---
@@ -117,7 +141,7 @@ npm run test:watch
 npm run test:cov
 ```
 
-- **EN**: External APIs and Slack are mocked; tests run offline and deterministically.  
+- **EN**: External APIs and Slack are mocked; tests run offline and deterministically.
 - **JP**: 外部 API と Slack はモック済みのため、オフラインかつ決定的にテストが走ります。
 
 ---
