@@ -26,18 +26,20 @@ describe('getWeatherAt', () => {
     const when = new Date('2024-01-01T12:34:56Z'); // → 13時丸め
     (global.fetch as jest.Mock).mockResolvedValueOnce(
       okJson({
+        latitude: 35,
+        longitude: 139,
         hourly: {
-          time: ['2024-01-01T12:00','2024-01-01T13:00','2024-01-01T14:00'],
+          time: ['2024-01-01T12:00:00Z','2024-01-01T13:00:00Z','2024-01-01T14:00:00Z'],
           cloudcover: [50, 30, 10],
           precipitation: [0, 0, 0],
           visibility: [5000, 9000, 10000],
-          windspeed_10m: [3, 2, 4],
+          wind_speed_10m: [3, 2, 4],
         }
       })
     );
     const wx = await getWeatherAt(35, 139, when);
     expect(wx).not.toBeNull();
-    expect(wx!.time).toBe('2024-01-01T13:00');
+    expect(wx!.time).toBe('2024-01-01T13:00:00Z');
     expect(wx!.cloudcover).toBe(30);
     expect(wx!.windspeed10m).toBe(2);
   });
@@ -46,18 +48,20 @@ describe('getWeatherAt', () => {
     const when = new Date('2024-01-01T12:05:00Z'); // 12:00に近い
     (global.fetch as jest.Mock).mockResolvedValueOnce(
       okJson({
+        latitude: 35,
+        longitude: 139,
         hourly: {
-          time: ['2024-01-01T11:00','2024-01-01T12:00','2024-01-01T14:00'],
+          time: ['2024-01-01T11:00:00Z','2024-01-01T12:00:00Z','2024-01-01T14:00:00Z'],
           cloudcover: [80, 40, 10],
           precipitation: [0, 0, 0],
           visibility: [3000, 7000, 10000],
-          windspeed_10m: [5, 3, 1],
+          wind_speed_10m: [5, 3, 1],
         }
       })
     );
     const wx = await getWeatherAt(35, 139, when);
     expect(wx).not.toBeNull();
-    expect(wx!.time).toBe('2024-01-01T12:00');
+    expect(wx!.time).toBe('2024-01-01T12:00:00Z');
     expect(wx!.cloudcover).toBe(40);
   });
 });

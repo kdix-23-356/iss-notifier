@@ -12,6 +12,7 @@ import type { WeatherSample } from "../core";
 import type { SunState } from "../core";
 import type { Illumination } from "../core";
 import type { ScoreResult } from "../core";
+import { ISS_TRACKER_URL } from "./constants";
 
 const COLOR_BY_DECISION: Record<ScoreResult["decision"], string> = {
   OK: "#2ecc71",
@@ -100,4 +101,72 @@ export function buildPassNotificationPayload(params: BuildPayloadParams) {
   };
 
   return payload;
+}
+
+/**
+ * API呼び出し向けペイロードビルダー
+ * GET /passes/:stationId エンドポイント等からの呼び出し用
+ * - `windowInfo`: "探索: Xh, AOSしきい値: Y°" を自動生成
+ * - `trackerUrl`: ISS トラッカー URL をデフォルト設定
+ */
+export function buildApiPassPayload(
+  stationName: string,
+  pass: { aos: Date; tca: Date; los: Date; maxEl: number },
+  wx: WeatherSample | null,
+  sun: SunState,
+  illum: Illumination | null,
+  score: ScoreResult,
+  options?: {
+    windowHours?: number;
+    aosDeg?: number;
+  }
+) {
+  const windowHours = options?.windowHours ?? 2;
+  const aosDeg = options?.aosDeg ?? 10;
+
+  return buildPassNotificationPayload({
+    stationName,
+    aosIso: pass.aos.toISOString(),
+    tcaIso: pass.tca.toISOString(),
+    losIso: pass.los.toISOString(),
+    maxElDeg: pass.maxEl,
+    wx,
+    sun,
+    illum,
+    score,
+    windowInfo: `探索: ${windowHours}h, AOSしきい値: ${aosDeg}°`,
+    trackerUrl: ISS_TRACKER_URL,
+  });
+}
+
+/**
+ * スケジューラ向けペイロードビルダー
+ * 自動通知（scheduler.ts）からの呼び出し用
+ * - `windowInfo`: "自動通知: AOSまで約 Xm" を自動計算
+ * - `trackerUrl`: ISS トラッカー URL をデフォルト設定
+ */
+export function buildSchedulerPassPayload(
+  stationName: string,
+  pass: { aos: Date; tca: Date; los: Date; maxEl: number },
+  wx: WeatherSample | null,
+  sun: SunState,
+  illum: Illumination | null,
+  score: ScoreResult,
+  nowUtc: Date = new Date()
+) {
+  const minutesUntilAos = Math.round((pass.aos.getTime() - nowUtc.getTime()) / 60000);
+
+  return buildPassNotificationPayload({
+    stationName,
+    aosIso: pass.aos.toISOString(),
+    tcaIso: pass.tca.toISOString(),
+    losIso: pass.los.toISOString(),
+    maxElDeg: pass.maxEl,
+    wx,
+    sun,
+    illum,
+    score,
+    windowInfo: `自動通知: AOSまで約 ${minutesUntilAos} 分`,
+    trackerUrl: ISS_TRACKER_URL,
+  });
 }

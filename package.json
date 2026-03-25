@@ -33,6 +33,7 @@
     "fastify": "^5.8.2",
     "node-cron": "^4.2.1",
     "satellite.js": "^6.0.2",
-    "suncalc": "^1.9.0"
+    "suncalc": "^1.9.0",
+    "zod": "^3.22.4"
   }
 }
