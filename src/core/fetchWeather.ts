@@ -21,6 +21,14 @@ export type WeatherSample = {
   windspeed10m?: number;    // m/s
 };
 
+/**
+ * UTC時刻を最寄り1時間バケットに丸める
+ * 例: 2024-01-01T00:26:00Z -> 2024-01-01T00
+ *     2024-01-01T00:31:00Z -> 2024-01-01T01
+ *
+ * @param d 参照時刻 (UTC)
+ * @returns "YYYY-MM-DDTHH" 形式
+ */
 function nearestHourIsoUtc(d: Date): string {
   const round = new Date(Date.UTC(
     d.getUTCFullYear(),
@@ -29,6 +37,8 @@ function nearestHourIsoUtc(d: Date): string {
     d.getUTCHours(), 0, 0, 0
   ));
   const delta = d.getUTCMinutes() * 60 + d.getUTCSeconds();
+
+  // 30分以上で次時刻に丸める (四捨五入)
   if (delta >= 30 * 60) {
     round.setUTCHours(round.getUTCHours() + 1);
   }
@@ -36,6 +46,15 @@ function nearestHourIsoUtc(d: Date): string {
 }
 
 // ネットワーク健全性の強化（タイムアウト/リトライ/詳細ログ）
+/**
+ * 指定位置・時刻の気象情報を Open-Meteo から取得
+ *
+ * 1) API へ GET 送信 (timeformat=ISO8601, timezone=UTC)
+ * 2) タイムアウト(RETRY) + 3段階リトライ
+ * 3) 時刻一致 or 近傍時刻選択
+ * 4) 情報を WeatherSample に整形
+ * 5) 例外時はログを残し null を返す
+ */
 export async function getWeatherAt(
   lat: number,
   lon: number,
@@ -69,13 +88,14 @@ export async function getWeatherAt(
     );
 
     const text = await res.text();
-    // 念のためJSON/テキスト双方に対応
+
+    // Open-Meteo は通常 JSON を返すが、予期しない文字列が返る可能性があるため
+    // フォールバックとして改行区切り時刻リストを扱う旧実装互換パスを維持
     let json: any;
     try {
       json = JSON.parse(text);
     } catch {
-      // JSONでなければそのままテキスト解析（既存実装の互換維持）
-      json = { hourly: { time: text.split(/\r?\n/).map(s => s.trim()).filter(Boolean) } };
+      json = { hourly: { time: text.split(/\r?\n/).map((s) => s.trim()).filter(Boolean) } };
     }
 
     const times: string[] = json?.hourly?.time ?? [];
