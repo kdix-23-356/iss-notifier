@@ -43,9 +43,11 @@
 - **Illumination check** with Sun vector & cylindrical shadow approximation / **日照判定**（太陽ベクトル＋円柱影近似）
 - **Weather integration** (Open‑Meteo hourly) / **天気連携**（Open‑Meteo 時間データ）
 - **Scoring** (0–100: geometry 40, weather 40, light 20) / **スコアリング**（0–100：幾何40・天気40・光20）
-- **Slack notification** (Block Kit payload) / **Slack 通知**（Block Kit）
+- **Slack notification** (Block Kit payload) with consolidated payload builders / **Slack 通知**（Block Kit + 統合ペイロードビルダー）
 - **Cron scheduler** (1‑min tick) & duplicate suppression / **スケジューラ**（1分周期）＋重複通知防止
 - **Resilience**: timeout + retry + structured logging / **堅牢化**：タイムアウト・リトライ・構造化ログ
+- **Environment validation** at startup (no silent failures) / **環境検証**（起動時の動作保証）
+- **Zod schema validation** for external APIs & query params / **Zod スキーマ検証**（Open‑Meteo API 応答・クエリパラメータ）
 - **Comprehensive tests** with mocks (Jest + ts‑jest) / **包括的なテスト**（Jest + ts‑jest、外部依存をモック）
 
 ---
@@ -78,6 +80,7 @@ cron(schedule) → ensureTleFresh → getCurrentTle
 - satellite.js, SunCalc, Open‑Meteo API
 - SQLite (better‑sqlite3)
 - Slack Webhook (Block Kit)
+- Zod (runtime schema validation)
 - Jest + ts‑jest
 
 ---
@@ -117,12 +120,18 @@ PORT=3000
 # Database (SQLite file path)
 SQLITE_PATH=./data/app.db
 
-# Slack Webhook (optional for notifications)
-SLACK_WEBHOOK_URL=
+# Slack Webhook (required in production, optional in development)
+SLACK_WEBHOOK_URL=https://hooks.slack.com/services/YOUR/WEBHOOK/URL
 
 # Node environment
 NODE_ENV=development
 ```
+
+**Environment Variable Validation / 環境変数検証**:
+- **EN**: The app validates required vars at startup (`src/env.ts`). `SLACK_WEBHOOK_URL` is **required in production** (`NODE_ENV=production`); development allows empty value (Slack notifications skipped gracefully).
+- **JP**: アプリケーションは起動時に必須変数を検証します（`src/env.ts`）。`SLACK_WEBHOOK_URL` は **本番環境で必須**（`NODE_ENV=production` 時）です。開発環境では空でも許可されます（Slack 通知は機能しません）。
+
+Missing required vars → clear error at startup (no silent failures)。
 
 - **EN**: `.env` is **git‑ignored**. Never commit secrets.
 - **JP**: `.env` は **.gitignore 済み**。機密は絶対にコミットしないでください。
@@ -238,8 +247,14 @@ jobs:
 
 ## 📌 Roadmap / 今後の拡張
 
-- **EN**: Add Zod schemas for strict I/O validation; configurable scoring weights; multi‑channel notifications (email/SMS/Teams).
-- **JP**: Zod による I/O 検証の厳格化、スコア重みの設定化、通知チャネルの多様化（メール/SMS/Teams など）。
+- ✅ **Zod schema validation** (implemented in #6) / Zod スキーマ検証（#6 で実装済み）
+  - Open‑Meteo API response validation
+  - Query parameter validation (`/passes/:stationId`)
+  - Helper functions for type‑safe parsing
+
+- 🔜 **Configurable scoring weights** / スコア重みの設定化
+- 🔜 **Multi‑channel notifications** (email/SMS/Teams) / 通知チャネルの多様化（メール/SMS/Teams など）
+- 🔜 **Database schema versioning** / DB スキーマのバージョン管理
 
 ---
 
