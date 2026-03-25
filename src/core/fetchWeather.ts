@@ -9,6 +9,7 @@
 // Open-Meteo呼び出しをタイムアウト＋指数バックオフで堅牢化。
 import { fetchWithTimeout } from "../lib/http";
 import { retry } from "../lib/retry";
+import { RETRY_CONFIG_STANDARD } from "../lib/retryConfig";
 import { log } from "../lib/log";
 import { ParseError } from "../lib/errors";
 
@@ -72,16 +73,14 @@ export async function getWeatherAt(
 
   try {
     const res = await retry(
-      () => fetchWithTimeout(url, { timeoutMs: 5000 }), // 5sタイムアウト
+      () => fetchWithTimeout(url, { timeoutMs: 5000 }),
       {
-        retries: 3,                    // 合計3回（初回＋再試行2回）
-        baseMs: 400,
-        maxMs: 4000,
-        factor: 2,
-        jitter: true,
+        ...RETRY_CONFIG_STANDARD,
         onRetry: (err, attempt, delayMs) =>
           log.warn("weather.fetch.retry", {
-            url, attempt, delayMs,
+            url,
+            attempt,
+            delayMs,
             err: err instanceof Error ? err.name : String(err),
           }),
       }

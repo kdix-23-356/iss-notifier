@@ -10,6 +10,7 @@
 // FIXME: すべての呼び出しを postSlack に移行できたら、このラッパーは削除してよい。
 import { fetchWithTimeout } from "../lib/http";
 import { retry } from "../lib/retry";
+import { RETRY_CONFIG_STANDARD } from "../lib/retryConfig";
 import { log } from "../lib/log";
 
 export type SlackPayload = Record<string, unknown>;
@@ -24,21 +25,19 @@ export async function postSlack(payload: SlackPayload): Promise<number> {
 
   try {
     const res = await retry(
-      () => fetchWithTimeout(SLACK_WEBHOOK_URL, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(payload),
-        timeoutMs: 5000,
-      }),
+      () =>
+        fetchWithTimeout(SLACK_WEBHOOK_URL, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(payload),
+          timeoutMs: 5000,
+        }),
       {
-        retries: 3,
-        baseMs: 400,
-        maxMs: 4000,
-        factor: 2,
-        jitter: true,
+        ...RETRY_CONFIG_STANDARD,
         onRetry: (err, attempt, delayMs) =>
           log.warn("slack.post.retry", {
-            attempt, delayMs,
+            attempt,
+            delayMs,
             err: err instanceof Error ? err.name : String(err),
           }),
       }
