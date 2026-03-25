@@ -53,6 +53,9 @@ export function startScheduler(): ScheduledTask {
       await ensureTleFresh(30);
       const tle = getCurrentTle();
 
+      // DB 接続を1回取得（better-sqlite3 の１接続１ライター設計に対応）
+      const db = getDb();
+
       for (const station of STATIONS) {
         try {
           // 現在:now から 6h のパスを探索
@@ -65,8 +68,7 @@ export function startScheduler(): ScheduledTask {
 
           const p = targets[0]!;
 
-          // DB 接続を1回行い、重複通知チェック / 登録していく
-          const db = getDb();
+          // 重複通知チェック
           const exists = db
             .prepare("SELECT 1 FROM notified_pass WHERE station_id = ? AND tca_utc = ? LIMIT 1")
             .get(station.id, p.tca.toISOString());
