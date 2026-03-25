@@ -18,7 +18,7 @@ import {
 } from "../core";
 import { getDb } from "../db";
 import { postSlack } from "../notify/slack";
-import { buildPassNotificationPayload } from "../notify/buildSlackBlocks";
+import { buildSchedulerPassPayload } from "../notify/buildSlackBlocks";
 import { log } from "../lib/log";
 
 let inProgress = false;
@@ -79,19 +79,15 @@ export function startScheduler(): ScheduledTask {
           const illum = getIllumination(tle.line1, tle.line2, p.tca);
           const score = scoreObservation(p.maxEl, wx, sun);
 
-          const payload = buildPassNotificationPayload({
-            stationName: station.name,
-            aosIso: p.aos.toISOString(),
-            tcaIso: p.tca.toISOString(),
-            losIso: p.los.toISOString(),
-            maxElDeg: p.maxEl,
+          const payload = buildSchedulerPassPayload(
+            station.name,
+            p,
             wx,
             sun,
             illum,
             score,
-            windowInfo: `自動通知: AOSまで約 ${Math.round((p.aos.getTime() - now.getTime()) / 60000)} 分`,
-            trackerUrl: "https://kdix-23-356.github.io/iss-tracker/"
-          });
+            now
+          );
 
           const status = await postSlack(payload).catch((e) => {
             log.error("slack.post.exception", { err: e instanceof Error ? e.message : String(e) });

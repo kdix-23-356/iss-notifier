@@ -12,14 +12,16 @@ import { retry } from "../lib/retry";
 import { RETRY_CONFIG_STANDARD } from "../lib/retryConfig";
 import { log } from "../lib/log";
 import { ParseError } from "../lib/errors";
+import { validateOpenMeteoResponse } from "../lib/schemas";
+import type { OpenMeteoResponse } from "../lib/schemas";
 
 // 既存の型定義（抜粋）。ファイル内に既にある場合は重複しないよう調整してください。
 export type WeatherSample = {
-  time: string;             // ISO8601, UTC
-  cloudcover?: number;      // %
-  precipitation?: number;   // mm
-  visibility?: number;      // m
-  windspeed10m?: number;    // m/s
+  time: string;                              // ISO8601, UTC
+  cloudcover: number | undefined;            // %, undefined if unavailable
+  precipitation: number | undefined;         // mm, undefined if unavailable
+  visibility: number | undefined;            // m, undefined if unavailable
+  windspeed10m: number | undefined;          // m/s, undefined if unavailable
 };
 
 /**
@@ -97,7 +99,13 @@ export async function getWeatherAt(
       json = { hourly: { time: text.split(/\r?\n/).map((s) => s.trim()).filter(Boolean) } };
     }
 
-    const times: string[] = json?.hourly?.time ?? [];
+    // Zod スキーマでバリデーション（失敗時は null だが、後続の時刻チェックで適切に処理）
+    const validated = validateOpenMeteoResponse(json);
+    if (!validated) {
+      throw new ParseError(url, "OpenMeteo response validation failed");
+    }
+
+    const times: string[] = validated.hourly.time ?? [];
     if (!Array.isArray(times) || times.length === 0) {
       throw new ParseError(url, "hourly.time is empty or not array");
     }
@@ -124,13 +132,13 @@ export async function getWeatherAt(
     const pickedTime = times[idx];
     if (typeof pickedTime !== "string") return null;
 
-    const h = json.hourly;
+    const h = validated.hourly;
     const sample: WeatherSample = {
       time: pickedTime,
       cloudcover: h.cloudcover?.[idx],
       precipitation: h.precipitation?.[idx],
       visibility: h.visibility?.[idx],
-      windspeed10m: (h.windspeed_10m ?? h.windspeed10m)?.[idx], // 入力ゆらぎに寛容に
+      windspeed10m: h.wind_speed_10m?.[idx], // 検証済みのキー名を使用
     };
 
     // 単位・範囲の軽い妥当性チェック（厳格化は今後の課題）

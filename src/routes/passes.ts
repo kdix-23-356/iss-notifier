@@ -11,7 +11,8 @@ import {
   getIllumination
 } from "../core";
 import { postSlack } from "../notify/slack";
-import { buildPassNotificationPayload } from "../notify/buildSlackBlocks";
+import { buildApiPassPayload } from "../notify/buildSlackBlocks";
+import { validatePassForecastOptions } from "../lib/schemas";
 
 type PassesQuery = {
   windowHours?: string;
@@ -43,6 +44,21 @@ export async function registerPassRoutes(app: FastifyInstance) {
     const aosDeg = Number(q.aosDeg ?? "10");
     const diagnostics = q.diagnostics === "1";
 
+    // Zod スキーマでリクエストパラメータをバリデーション
+    try {
+      validatePassForecastOptions({
+        windowHours,
+        aosDeg,
+        diagnostics,
+      });
+    } catch (err: any) {
+      return reply.code(400).send({
+        ok: false,
+        error: "Invalid parameters",
+        details: err.message || String(err),
+      });
+    }
+
     // 常に最新の TLE を取得（最大30分旧まで許容）
     await ensureTleFresh(30);
     const tle = getCurrentTle();
@@ -60,16 +76,15 @@ export async function registerPassRoutes(app: FastifyInstance) {
       const illum = getIllumination(tle.line1, tle.line2, p.tca);
       const score = scoreObservation(p.maxEl, wx, sun);
 
-      const payload = buildPassNotificationPayload({
-        stationName: station.name,
-        aosIso: p.aos.toISOString(),
-        tcaIso: p.tca.toISOString(),
-        losIso: p.los.toISOString(),
-        maxElDeg: p.maxEl,
-        wx, sun, illum, score,
-        windowInfo: `探索: ${windowHours}h, AOSしきい値: ${aosDeg}°`,
-        trackerUrl: "https://kdix-23-356.github.io/iss-tracker/"
-      });
+      const payload = buildApiPassPayload(
+        station.name,
+        p,
+        wx,
+        sun,
+        illum,
+        score,
+        { windowHours, aosDeg }
+      );
 
       // Slack通知は冗長失敗可のため例外を握りつぶす
       try {
