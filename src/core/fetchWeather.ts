@@ -17,11 +17,11 @@ import type { OpenMeteoResponse } from "../lib/schemas";
 
 // 既存の型定義（抜粋）。ファイル内に既にある場合は重複しないよう調整してください。
 export type WeatherSample = {
-  time: string;             // ISO8601, UTC
-  cloudcover?: number;      // %
-  precipitation?: number;   // mm
-  visibility?: number;      // m
-  windspeed10m?: number;    // m/s
+  time: string;                              // ISO8601, UTC
+  cloudcover: number | undefined;            // %, undefined if unavailable
+  precipitation: number | undefined;         // mm, undefined if unavailable
+  visibility: number | undefined;            // m, undefined if unavailable
+  windspeed10m: number | undefined;          // m/s, undefined if unavailable
 };
 
 /**
