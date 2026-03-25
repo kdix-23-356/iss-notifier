@@ -24,12 +24,22 @@ export type ScoreResult = {
  * @param wx 天気サンプル（Open‑Meteoの近傍1時間バケット）
  * @param sun 観測地での太陽高度・薄明
  */
+/**
+ * 観測スコアを計算する
+ *
+ * maxElDeg: 天頂角の指標 (大きいほど可視性良好)
+ * wx: Open-Meteo から取得した気象情報 (nullは不明扱い)
+ * sun: 観測時の太陽高度/薄明情報
+ *
+ * 返却は 0-100 のスコアと判定OK/WARN/NG、および各要素の内訳
+ */
 export function scoreObservation(
   maxElDeg: number,
   wx: WeatherSample | null,
   sun: SunState
 ): ScoreResult {
-  // 幾何（最大仰角）: 20°→0点, 60°→40点の線形補間。範囲外は切り詰める。
+  // 幾何（最大仰角）: 20°→0点、60°→40点の線形補間
+  // 0-40 の範囲でクランプ
   const geom = clamp(scaleLinear(maxElDeg, 20, 60, 0, 40), 0, 40);
 
   // 気象: 雲量・降水・視程・風速を合成。単純加減点のMVP実装。
@@ -57,7 +67,9 @@ export function scoreObservation(
   }
   weather = clamp(weather, 0, 40);
 
-  // 光環境: 太陽高度 -10° 近傍で満点 20、そこから離れるほど線形減点し下限 0。
+  // 光環境: 太陽高度による評価
+  // - (~-10°) が最も暗く、観測がしやすい。-6°以上は日中でNG
+  // - -20°以下は暗くて見通しがいいが、大気条件などで低減を固定 (12点)
   const s = sun.sunAltDeg;
   let light = 0;
   if (s <= -6 && s >= -20) {
