@@ -3,13 +3,21 @@
 import { getWeatherAt } from '../fetchWeather';
 
 const originalFetch = global.fetch;
+const originalWarn = console.warn;
+const originalError = console.error;
 
 beforeEach(() => {
   global.fetch = jest.fn();
+  // 異常系テストで意図的に発生させるエラーのログをミュート
+  console.warn = jest.fn();
+  console.error = jest.fn();
 });
 
 afterEach(() => {
   global.fetch = originalFetch!;
+  // テストが終わったら元の関数に戻す
+  console.warn = originalWarn;
+  console.error = originalError;
 });
 
 function okJson(body: any) {
@@ -63,5 +71,22 @@ describe('getWeatherAt', () => {
     expect(wx).not.toBeNull();
     expect(wx!.time).toBe('2024-01-01T12:00:00Z');
     expect(wx!.cloudcover).toBe(40);
+  });
+
+  test('returns null with network failure', async () => {
+    // retryによって複数回呼ばれるため、Onceを外して常にエラーを返すようにする
+    (global.fetch as jest.Mock).mockRejectedValue(new Error('network fail'));
+    const wx = await getWeatherAt(35, 139, new Date('2024-01-01T12:00:00Z'));
+    expect(wx).toBeNull();
+  });
+
+  test('returns null when JSON parsing fails and fallback is invalid for schema', async () => {
+    (global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: true,
+      text: () => Promise.resolve('2024-01-01T12:00:00Z\n2024-01-01T13:00:00Z'),
+    } as any);
+
+    const wx = await getWeatherAt(35, 139, new Date('2024-01-01T12:00:00Z'));
+    expect(wx).toBeNull();
   });
 });

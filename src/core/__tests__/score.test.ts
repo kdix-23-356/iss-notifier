@@ -1,36 +1,59 @@
 // path: src/core/__tests__/score.test.ts
 // スコアの境界・ルール検証：幾何・気象・光の寄与とdecisionの閾値（70/50）を確認する。
 import { scoreObservation } from '../score';
+import type { WeatherSample } from '../fetchWeather';
+import type { SunState } from '../astro';
 
-const sunNight = { sunAltDeg: -15, twilight: 'astronomical' as const };
-const sunDay = { sunAltDeg: +10, twilight: 'day' as const };
 
 describe('scoreObservation', () => {
-  test('high elevation, clear sky, dark -> OK', () => {
-    const wx = { time: '2024-01-01T00:00', cloudcover: 0, visibility: 10000, windspeed10m: 2, precipitation: 0 };
-    const r = scoreObservation(70, wx, sunNight);
-    expect(r.score).toBeGreaterThanOrEqual(70);
-    expect(r.decision).toBe('OK');
-    expect(r.breakdown.geometry).toBeGreaterThan(0);
-    expect(r.breakdown.weather).toBeGreaterThan(0);
-    expect(r.breakdown.light).toBeGreaterThan(0);
+  // --- Test data setup ---
+  const goodWx: WeatherSample = { time: 't', cloudcover: 0, visibility: 20000, windspeed10m: 1, precipitation: 0 };
+  const badWx: WeatherSample = { time: 't', cloudcover: 100, visibility: 1000, windspeed10m: 20, precipitation: 1 };
+  const goodSun: SunState = { sunAltDeg: -15, twilight: 'astronomical' };
+  const badSun: SunState = { sunAltDeg: 5, twilight: 'day' };
+
+  // --- New, more specific tests ---
+  test('returns high score and OK for excellent conditions', () => {
+    const result = scoreObservation(80, goodWx, goodSun);
+    expect(result.decision).toBe('OK');
+    expect(result.score).toBe(90); // geom:40 + weather:35 + light:15 = 90
+    expect(result.breakdown.geometry).toBe(40);
+    expect(result.breakdown.weather).toBe(35);
+    expect(result.breakdown.light).toBe(15);
   });
 
-  test('low elevation, overcast, daytime -> NG', () => {
-    const wx = { time: '2024-01-01T00:00', cloudcover: 100, visibility: 1000, windspeed10m: 12, precipitation: 1 };
-    const r = scoreObservation(10, wx, sunDay);
-    expect(r.score).toBeLessThan(50);
-    expect(r.decision).toBe('NG');
+  test('returns medium score and WARN for mediocre conditions', () => {
+    const mediocreWx: WeatherSample = { time: 't', cloudcover: 50, visibility: 8000, windspeed10m: 8, precipitation: 0 };
+    const mediocreSun: SunState = { sunAltDeg: -7, twilight: 'nautical' };
+    const result = scoreObservation(35, mediocreWx, mediocreSun);
+    expect(result.decision).toBe('WARN');
+    expect(result.score).toBeGreaterThanOrEqual(50);
+    expect(result.score).toBeLessThan(70);
   });
 
-  test('boundary decisions', () => {
-    // 雑にOK/WARN/NG境界を叩く：仕様が変わったらここで検知できる
-    const wxGood = { time: 't', cloudcover: 10, visibility: 8000, windspeed10m: 3, precipitation: 0 };
-    const s1 = scoreObservation(60, wxGood, sunNight);
-    // WARNケース（中間品質）を作る
-    const wxMid = { time: 't', cloudcover: 60, visibility: 4000, windspeed10m: 8, precipitation: 0 };
-    const s2 = scoreObservation(40, wxMid, sunNight);
-    expect(['OK','WARN','NG']).toContain(s1.decision);
-    expect(['OK','WARN','NG']).toContain(s2.decision);
+  test('returns low score and NG for poor conditions', () => {
+    const result = scoreObservation(15, badWx, badSun);
+    expect(result.decision).toBe('NG');
+    expect(result.score).toBe(0);
+    expect(result.breakdown.geometry).toBe(0);
+    expect(result.breakdown.weather).toBe(0);
+    expect(result.breakdown.light).toBe(0);
+  });
+
+  test('returns NG when score is just below WARN threshold', () => {
+    // ジオメトリ: 20deg -> 0点, 天気: 17.5点, 光: 20点 => 合計: 37.5点 -> NG
+    const wx: WeatherSample = { time: 't', cloudcover: 50, visibility: 5000, windspeed10m: 5, precipitation: 0 };
+    const sun: SunState = { sunAltDeg: -10, twilight: 'astronomical' };
+    const result = scoreObservation(20, wx, sun);
+    expect(result.score).toBe(38); // Math.round(37.5)
+    expect(result.decision).toBe('NG');
+  });
+
+  test('weather is null, weather score should be 0', () => {
+    const result = scoreObservation(80, null, goodSun);
+    expect(result.breakdown.weather).toBe(0);
+    // 天気情報がある場合と比較してスコアが低いことを確認
+    const resultWithWeather = scoreObservation(80, goodWx, goodSun);
+    expect(result.score).toBeLessThan(resultWithWeather.score);
   });
 });
